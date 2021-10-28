@@ -8,8 +8,8 @@ fn main() {
     let board_size: u8 = 4;
 
     let mut board = Board::new(board_size);
-    let mut ai = Ai::new(board_size, '\u{2660}'); // spade suit symbol
-    let mut human = Human::new('\u{2665}'); // heart suit symbol
+    let mut ai = Ai::new(board_size, 'y'); // spade suit symbol
+    let mut human = Human::new('z'); // heart suit symbol
 
     const N_PLAYERS: usize = 2;
     let players: [&mut dyn Play; N_PLAYERS] = [&mut ai, &mut human];
