@@ -1,120 +1,82 @@
-use std::io::{self, Write};
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+mod player;
+use player::*;
 
-const PLAYER_TOKEN: char = 'X';
-const AI_TOKEN: char = 'Y';
-
-static SOLUTIONS: [i32; 9] = [0b111_111_111,     // full
+#[rustfmt::skip]
+static SOLUTIONS: [i32; 8] = [
     0b000_000_111, 0b000_111_000, 0b111_000_000, // rows
     0b001_001_001, 0b010_010_010, 0b100_100_100, // columns
-    0b100_010_001, 0b001_010_100];               // diagonals
-
-enum Winner {
-    DRAW,
-    PLAYER,
-    AI,
-}
+    0b100_010_001, 0b001_010_100]; // diagonals
+const FULL: i32 = 0b111_111_111;
 
 fn main() {
-    print_welcome();
-    let (winner, player_cases, ai_cases) = run();
-    print_winner(winner, player_cases, ai_cases);
+    let mut players = [
+        Player::human('A'),
+        Player::ai('B'),
+        Player::ai('C'),
+        Player::human('D'),
+    ];
+    welcome(&players);
+
+    let winner = run_game(&mut players);
+    congratulate(winner);
 }
 
-fn print_welcome() {
+fn welcome(players: &[Player]) {
+    let get_player_kind = |x: &Player| match x.kind {
+        PlayerKind::HUMAN => "You",
+        PlayerKind::AI => "Computer",
+    };
+
     println!("Welcome to Rust tic-tac-toe, have fun!");
-    println!("You play with: {}.", PLAYER_TOKEN);
-    println!("IA plays with: {}.", AI_TOKEN);
-}
-
-fn print_winner(winner: Winner, player_cases: i32, ai_cases: i32) {
-    print_board(player_cases, ai_cases);
-
-    // todo use match pattern to cover all the cases
-    if matches!(winner, Winner::DRAW) {
-        println!("It's a draw, not to bad...");
-    }
-    else if matches!(winner, Winner::PLAYER) {
-        println!("You won, congratulations!");
-    }
-    else {
-        println!("Computer won, try again :)");
+    println!(
+        "{} plays first with {}.",
+        get_player_kind(&players[0]),
+        players[0].token
+    );
+    for i in 1..players.len() {
+        println!(
+            "{} plays then with {}.",
+            get_player_kind(&players[i]),
+            players[i].token
+        );
     }
 }
 
-fn run() -> (Winner, i32, i32) {
-    let mut player_cases = 0;
-    let mut ai_cases = 0;
-
-    let mut ai_turns: Vec<i32> = (0..9).collect();
-    ai_turns.shuffle(&mut thread_rng());
+fn run_game(players: &mut [Player]) -> Option<&Player> {
+    let mut turn = 0;
 
     loop {
-        print_board(player_cases, ai_cases);
-
-        let player_case = prompt_player(player_cases | ai_cases);
-        player_cases |= player_case;
-
-        if (is_winner(player_cases)) {
-            return (Winner::PLAYER, player_cases, ai_cases);
+        if matches!(players[turn].kind, PlayerKind::HUMAN) {
+            print_board(players);
         }
 
-        // check is_draw after is_winner in the case one wins on the last case
-        if (is_draw(player_cases | ai_cases)) {
-            return (Winner::DRAW, player_cases, ai_cases);
+        let board = compute_board(players);
+        players[turn].play(board);
+        let board = compute_board(players);
+
+        if is_winner(players[turn].cases) {
+            return Some(&players[turn]);
         }
 
-        let ai_case = ai_turn(&mut ai_turns, player_cases | ai_cases);
-        ai_cases |= ai_case;
-
-        if (is_winner(ai_cases)) {
-            return (Winner::AI, player_cases, ai_cases);
+        if board == FULL {
+            return None;
         }
 
-        if (is_draw(player_cases | ai_cases)) {
-            return (Winner::DRAW, player_cases, ai_cases);
-        }
+        turn = (turn + 1) % players.len();
     }
 }
 
-fn is_draw(board: i32) -> bool {
-    board == 0b111_111_111
-}
-
-// todo implement
-fn prompt_player(board: i32) -> i32 {
-    loop {
-        print!("Enter a case: ");
-        io::stdout().flush().unwrap();
-
-        let mut buffer = String::new();
-        std::io::stdin()
-                .read_line(&mut buffer)
-                .expect("The program failed to read your input");
-
-        buffer.pop(); // todo remove new line depends on the system at runtime
-        let case: i32 = buffer.parse().unwrap();
-
-        if (1 << case) & board == 0 {
-            return 1 << case;
+fn congratulate(winner: Option<&Player>) {
+    match winner {
+        Some(player) => {
+            if matches!(player.kind, PlayerKind::HUMAN) {
+                println!("{} won, congratulations!", player.token);
+            } else {
+                println!("Computer {} won, try again :)", player.token);
+            }
         }
-        else {
-            println!("This case is already taken.");
-        }
+        None => println!("It's a draw, try again :)"),
     }
-}
-
-fn ai_turn(ai_turns: &mut Vec<i32>, board: i32) -> i32 {
-    let mut case = ai_turns.pop().unwrap();
-
-    while (1 << case) & board != 0 {
-        case = ai_turns.pop().unwrap();
-    }
-
-    println!("Computer plays case {}", case);
-
-    1 << case
 }
 
 fn is_winner(cases: i32) -> bool {
@@ -123,26 +85,34 @@ fn is_winner(cases: i32) -> bool {
             return true;
         }
     }
-
     false
 }
 
-fn print_board(player_cases: i32, ai_cases: i32) {
+fn compute_board(players: &[Player]) -> i32 {
+    players.iter().fold(0, |acc, p| acc | p.cases)
+}
+
+fn print_board(players: &[Player]) {
     println!("");
     println!("Board:");
 
-    for case in (0..9) {
-        let converted = 1 << case;
+    for case in 0..9 {
+        let case_as_flag = 1 << case;
 
-        if converted & player_cases != 0 {
-            print!(" {} |", PLAYER_TOKEN);
-        } else if converted & ai_cases != 0 {
-            print!(" {} |", AI_TOKEN);
-        } else {
-            print!(" {} |", case);
+        let mut occupied: Option<char> = None;
+        for p in players {
+            if case_as_flag & p.cases != 0 {
+                occupied = Some(p.token);
+                break;
+            }
         }
 
-        if (case + 1) % 3 == 0{
+        match occupied {
+            Some(token) => print!(" {} |", token),
+            None => print!(" {} |", case),
+        }
+
+        if (case + 1) % 3 == 0 {
             println!();
         }
     }
