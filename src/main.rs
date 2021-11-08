@@ -1,12 +1,7 @@
 mod player;
 use player::*;
 
-#[rustfmt::skip]
-static SOLUTIONS: [i32; 8] = [
-    0b000_000_111, 0b000_111_000, 0b111_000_000, // rows
-    0b001_001_001, 0b010_010_010, 0b100_100_100, // columns
-    0b100_010_001, 0b001_010_100]; // diagonals
-const FULL: i32 = 0b111_111_111;
+mod configuration;
 
 fn main() {
     let mut players = [
@@ -33,6 +28,7 @@ fn welcome(players: &[Player]) {
         get_player_kind(&players[0]),
         players[0].token
     );
+
     for i in 1..players.len() {
         println!(
             "{} plays then with {}.",
@@ -58,7 +54,7 @@ fn run_game(players: &mut [Player]) -> Option<&Player> {
             return Some(&players[turn]);
         }
 
-        if board == FULL {
+        if board == configuration::BOARD_FULL {
             return None;
         }
 
@@ -80,7 +76,7 @@ fn congratulate(winner: Option<&Player>) {
 }
 
 fn is_winner(cases: i32) -> bool {
-    for s in SOLUTIONS {
+    for s in configuration::SOLUTIONS {
         if cases & s == s {
             return true;
         }
@@ -96,7 +92,7 @@ fn print_board(players: &[Player]) {
     println!("");
     println!("Board:");
 
-    for case in 0..9 {
+    for case in configuration::BOARD_MIN_CASE..=configuration::BOARD_MAX_CASE {
         let case_as_flag = 1 << case;
 
         let mut occupied: Option<char> = None;
@@ -112,7 +108,7 @@ fn print_board(players: &[Player]) {
             None => print!(" {} |", case),
         }
 
-        if (case + 1) % 3 == 0 {
+        if (case + 1) % configuration::BOARD_ROW_SIZE == 0 {
             println!();
         }
     }
