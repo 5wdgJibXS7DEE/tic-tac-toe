@@ -52,7 +52,7 @@ impl Player {
             case_as_flag = 1 << case;
             if case_as_flag & board == 0 {
                 if matches!(self.kind, PlayerKind::AI) {
-                    println!("Computer plays case {}.", case);
+                    println!("Computer {} plays case {}.", self.token, case);
                 }
 
                 break;

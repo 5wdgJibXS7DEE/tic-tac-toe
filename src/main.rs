@@ -2,8 +2,8 @@ mod player;
 use player::*;
 mod configuration;
 use clap::*;
-use rand::thread_rng;
 use rand::seq::SliceRandom;
+use rand::thread_rng;
 
 fn main() {
     let (human, ai) = read_cl();
@@ -12,35 +12,44 @@ fn main() {
 
     let winner = run_game(&mut players);
     congratulate(winner);
+    print_board(&players);
 }
 
 fn read_cl() -> (u8, u8) {
     let matches = App::new("Tic-tac-toe with Rust")
         .version("0.2")
         .about("Play with your friends and computers")
-        .arg(Arg::with_name("humans")
-            .long("humans")
-            .value_name("n")
-            .help("Sets the number of human players.")
-            .takes_value(true))
-        .arg(Arg::with_name("computers")
-            .long("computers")
-            .value_name("n")
-            .help("Sets the number of computer players.")
-            .takes_value(true))
+        .arg(
+            Arg::with_name("humans")
+                .long("humans")
+                .value_name("n")
+                .help("Sets the number of human players.")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("computers")
+                .long("computers")
+                .value_name("n")
+                .help("Sets the number of computer players.")
+                .takes_value(true),
+        )
         .get_matches();
 
     let mut human: u8 = match matches.value_of("humans") {
-        Some(n) => n.parse().unwrap(), // todo unwrap
+        Some(n) => n.parse().expect("invalid number for argument: humans"),
         None => 0,
     };
 
     let mut ai: u8 = match matches.value_of("computers") {
-        Some(n) => n.parse().unwrap(), // todo unwrap
+        Some(n) => n.parse().expect("invalid number for argument: computers"),
         None => 0,
     };
 
-    // sets default number if no argument is provided
+    if human + ai > 26 {
+        panic!("total number of players is limited to 26");
+    }
+
+    // sets default number if no # players is provided
     if human + ai == 0 {
         human = 1;
         ai = 1;
@@ -143,24 +152,35 @@ fn print_board(players: &[Player]) {
     println!("");
     println!("Board:");
 
-    for case in configuration::BOARD_MIN_CASE..=configuration::BOARD_MAX_CASE {
-        let case_as_flag = 1 << case;
+    for row in 0..configuration::BOARD_ROWS {
+        print!("|");
 
-        let mut occupied: Option<char> = None;
-        for p in players {
-            if case_as_flag & p.cases != 0 {
-                occupied = Some(p.token);
-                break;
+        // print the left board with cases' number
+        for col in 0..configuration::BOARD_ROW_SIZE {
+            print!(" {} |", row * configuration::BOARD_ROWS + col);
+        }
+
+        print!("  =>  |");
+
+        // print the right board with tokens occupying cases
+        for col in 0..configuration::BOARD_ROW_SIZE {
+            let case = row * configuration::BOARD_ROWS + col;
+            let case_as_flag = 1 << case;
+
+            let mut occupied: Option<char> = None;
+            for p in players {
+                if case_as_flag & p.cases != 0 {
+                    occupied = Some(p.token);
+                    break;
+                }
+            }
+
+            match occupied {
+                Some(token) => print!(" {} |", token),
+                None => print!("   |"),
             }
         }
 
-        match occupied {
-            Some(token) => print!(" {} |", token),
-            None => print!(" {} |", case),
-        }
-
-        if (case + 1) % configuration::BOARD_ROW_SIZE == 0 {
-            println!();
-        }
+        println!();
     }
 }

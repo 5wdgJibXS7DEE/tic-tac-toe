@@ -8,3 +8,4 @@ pub const BOARD_FULL: i32 = 0b111_111_111;
 pub const BOARD_MIN_CASE: i32 = 0;
 pub const BOARD_MAX_CASE: i32 = 8;
 pub const BOARD_ROW_SIZE: i32 = 3;
+pub const BOARD_ROWS: i32 = 3;
