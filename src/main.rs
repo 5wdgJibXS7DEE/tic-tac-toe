@@ -1,19 +1,70 @@
 mod player;
 use player::*;
-
 mod configuration;
+use clap::*;
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 fn main() {
-    let mut players = [
-        Player::human('A'),
-        Player::ai('B'),
-        Player::ai('C'),
-        Player::human('D'),
-    ];
+    let (human, ai) = read_cl();
+    let mut players = create(human, ai);
     welcome(&players);
 
     let winner = run_game(&mut players);
     congratulate(winner);
+}
+
+fn read_cl() -> (u8, u8) {
+    let matches = App::new("Tic-tac-toe with Rust")
+        .version("0.2")
+        .about("Play with your friends and computers")
+        .arg(Arg::with_name("humans")
+            .long("humans")
+            .value_name("n")
+            .help("Sets the number of human players.")
+            .takes_value(true))
+        .arg(Arg::with_name("computers")
+            .long("computers")
+            .value_name("n")
+            .help("Sets the number of computer players.")
+            .takes_value(true))
+        .get_matches();
+
+    let mut human: u8 = match matches.value_of("humans") {
+        Some(n) => n.parse().unwrap(), // todo unwrap
+        None => 0,
+    };
+
+    let mut ai: u8 = match matches.value_of("computers") {
+        Some(n) => n.parse().unwrap(), // todo unwrap
+        None => 0,
+    };
+
+    // sets default number if no argument is provided
+    if human + ai == 0 {
+        human = 1;
+        ai = 1;
+    }
+
+    (human, ai)
+}
+
+fn create(human: u8, ai: u8) -> Vec<Player> {
+    let mut players: Vec<Player> = vec![];
+    let mut token: char = 'A';
+
+    for _ in 0..human {
+        players.push(Player::human(token));
+        token = ((token as u8) + 1) as char;
+    }
+
+    for _ in 0..ai {
+        players.push(Player::ai(token));
+        token = ((token as u8) + 1) as char;
+    }
+
+    players.shuffle(&mut thread_rng());
+    players
 }
 
 fn welcome(players: &[Player]) {
